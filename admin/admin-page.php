@@ -9,22 +9,18 @@ defined('ABSPATH') or die('No script kiddies please!');
  * It includes functions to register the admin menu, display the admin page content, and handle user interactions.
  */
 
-// Include necessary files
-require_once ALC_PLUGIN_PATH . 'admin/link-table.php';
-require_once ALC_PLUGIN_PATH . 'includes/db-manager.php';
-
 /**
  * Register the admin menu for the Advanced Link Checker plugin.
  */
 function alc_register_admin_menu() {
     add_menu_page(
-        __('Advanced Link Checker', 'advanced-link-checker'), // Page title
-        __('Link Checker', 'advanced-link-checker'), // Menu title
-        'manage_options', // Capability
-        'advanced-link-checker', // Menu slug
-        'alc_admin_page_display', // Function to display the admin page
-        'dashicons-admin-links', // Icon URL
-        100 // Position
+        __('Advanced Link Checker', 'advanced-link-checker'),
+        __('Link Checker', 'advanced-link-checker'),
+        'manage_options',
+        'advanced-link-checker',
+        'alc_admin_page_display',
+        'dashicons-admin-links',
+        100
     );
 }
 add_action('admin_menu', 'alc_register_admin_menu');
@@ -33,32 +29,90 @@ add_action('admin_menu', 'alc_register_admin_menu');
  * Display the admin page content.
  */
 function alc_admin_page_display() {
-    // Check user capability
     if (!current_user_can('manage_options')) {
         wp_die(__('You do not have sufficient permissions to access this page.', 'advanced-link-checker'));
     }
 
-    // Handle form submission, if any
+    // Handle form submission
     if (isset($_POST['alc_action'])) {
-        // Verify nonce for security
         check_admin_referer('alc_manage_links');
 
-        // Handle the action (e.g., recheck, dismiss, etc.)
-        // This is a placeholder for action handling logic
-        // Actions would be processed here based on 'alc_action' value
+        $action = sanitize_text_field($_POST['alc_action']);
+        switch ($action) {
+            case 'recheck_all':
+                alc_recheck_all_links();
+                echo '<div class="notice notice-success"><p>' . __('All links have been rechecked.', 'advanced-link-checker') . '</p></div>';
+                break;
+            case 'scan_now':
+                alc_perform_scan();
+                echo '<div class="notice notice-success"><p>' . __('Scan completed successfully.', 'advanced-link-checker') . '</p></div>';
+                break;
+        }
     }
+
+    // Get statistics
+    $statistics = alc_get_statistics();
 
     // Prepare the list table
     $linkTable = new ALC_Link_Table();
     $linkTable->prepare_items();
 
-    // Display the admin page
     ?>
-    <div class="wrap">
+    <div class="wrap alc-admin-wrap">
         <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+        <!-- Statistics -->
+        <div class="alc-stats-row">
+            <div class="alc-stat-box <?php echo $statistics['total_broken_links'] > 0 ? 'error' : 'success'; ?>">
+                <h3><?php _e('Total Broken Links', 'advanced-link-checker'); ?></h3>
+                <div class="alc-stat-number"><?php echo esc_html($statistics['total_broken_links']); ?></div>
+            </div>
+            <?php if (!empty($statistics['status_code_counts'])) : ?>
+                <?php foreach (array_slice($statistics['status_code_counts'], 0, 3) as $status) : ?>
+                <div class="alc-stat-box warning">
+                    <h3><?php printf(__('Status %s', 'advanced-link-checker'), esc_html($status['status_code'])); ?></h3>
+                    <div class="alc-stat-number"><?php echo esc_html($status['count']); ?></div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- Status Code Distribution Chart -->
+        <?php if (!empty($statistics['status_code_counts'])) : ?>
+        <div class="alc-chart-container">
+            <h3><?php _e('Status Code Distribution', 'advanced-link-checker'); ?></h3>
+            <?php
+            $max_count = max(array_column($statistics['status_code_counts'], 'count'));
+            foreach ($statistics['status_code_counts'] as $status) :
+                $percentage = $max_count > 0 ? ($status['count'] / $max_count) * 100 : 0;
+            ?>
+            <div class="alc-chart-bar">
+                <span class="alc-chart-label"><?php echo esc_html($status['status_code']); ?></span>
+                <div class="alc-chart-fill" style="width: <?php echo esc_attr($percentage); ?>%;"></div>
+                <span class="alc-chart-count"><?php echo esc_html($status['count']); ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Actions Bar -->
+        <div class="alc-actions-bar">
+            <form method="post" style="display:inline;">
+                <?php wp_nonce_field('alc_manage_links'); ?>
+                <input type="hidden" name="alc_action" value="scan_now" />
+                <button type="submit" class="button button-primary"><?php _e('Scan Now', 'advanced-link-checker'); ?></button>
+            </form>
+            <form method="post" style="display:inline;">
+                <?php wp_nonce_field('alc_manage_links'); ?>
+                <input type="hidden" name="alc_action" value="recheck_all" />
+                <button type="submit" class="button"><?php _e('Recheck All Links', 'advanced-link-checker'); ?></button>
+            </form>
+            <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=alc_export_csv&security=' . wp_create_nonce('alc_export_nonce'))); ?>" class="button"><?php _e('Export CSV', 'advanced-link-checker'); ?></a>
+        </div>
+
+        <!-- Links Table -->
         <form method="post">
             <?php
-            // Output nonce, action, and option_page fields for a settings page.
             wp_nonce_field('alc_manage_links');
             $linkTable->display();
             ?>
@@ -71,13 +125,19 @@ function alc_admin_page_display() {
  * Register the styles and scripts for the admin page.
  */
 function alc_admin_enqueue_scripts($hook) {
-    // Load only on our specific admin page
     if ($hook != 'toplevel_page_advanced-link-checker') {
         return;
     }
 
-    // Enqueue styles and scripts here
-    // wp_enqueue_style('alc_admin_css', ALC_PLUGIN_URL . 'path/to/css');
-    // wp_enqueue_script('alc_admin_js', ALC_PLUGIN_URL . 'path/to/js', array('jquery'), '', true);
+    wp_enqueue_style('alc-admin-css', ALC_PLUGIN_URL . 'admin/css/admin-style.css', array(), ALC_VERSION);
+    wp_enqueue_script('alc-admin-js', ALC_PLUGIN_URL . 'admin/js/admin-script.js', array('jquery'), ALC_VERSION, true);
+
+    wp_localize_script('alc-admin-js', 'alc_admin', array(
+        'ajax_url'        => admin_url('admin-ajax.php'),
+        'recheck_nonce'   => wp_create_nonce('alc_recheck_nonce'),
+        'resolve_nonce'   => wp_create_nonce('alc_resolve_nonce'),
+        'export_nonce'    => wp_create_nonce('alc_export_nonce'),
+        'rechecking_text' => __('Rechecking...', 'advanced-link-checker'),
+    ));
 }
 add_action('admin_enqueue_scripts', 'alc_admin_enqueue_scripts');

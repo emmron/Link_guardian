@@ -1,0 +1,132 @@
+/**
+ * Advanced Link Checker - Admin Styles
+ */
+
+.alc-admin-wrap {
+    max-width: 1200px;
+}
+
+.alc-stats-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.alc-stat-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-left: 4px solid #0073aa;
+    padding: 15px 20px;
+    min-width: 200px;
+    flex: 1;
+}
+
+.alc-stat-box.warning {
+    border-left-color: #ffb900;
+}
+
+.alc-stat-box.error {
+    border-left-color: #dc3232;
+}
+
+.alc-stat-box.success {
+    border-left-color: #46b450;
+}
+
+.alc-stat-box h3 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #23282d;
+}
+
+.alc-stat-box .alc-stat-number {
+    font-size: 28px;
+    font-weight: 600;
+    color: #0073aa;
+    line-height: 1.2;
+}
+
+.alc-stat-box.error .alc-stat-number {
+    color: #dc3232;
+}
+
+.alc-actions-bar {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.alc-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.alc-status-badge.status-404 {
+    background: #dc3232;
+}
+
+.alc-status-badge.status-403 {
+    background: #ffb900;
+    color: #23282d;
+}
+
+.alc-status-badge.status-500 {
+    background: #826eb4;
+}
+
+.alc-status-badge.status-0 {
+    background: #555;
+}
+
+/* Chart container */
+.alc-chart-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.alc-chart-container h3 {
+    margin-top: 0;
+}
+
+.alc-chart-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.alc-chart-label {
+    width: 80px;
+    font-size: 13px;
+    color: #555;
+}
+
+.alc-chart-fill {
+    height: 24px;
+    background: #0073aa;
+    border-radius: 3px;
+    min-width: 2px;
+    transition: width 0.3s ease;
+}
+
+.alc-chart-count {
+    margin-left: 10px;
+    font-size: 13px;
+    color: #555;
+}
+
+/* Loading spinner */
+.alc-spinner {
+    display: inline-block;
+    visibility: visible !important;
+    float: none;
+    margin: 0 5px;
+    vertical-align: middle;
+}

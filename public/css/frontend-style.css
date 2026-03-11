@@ -1,0 +1,39 @@
+/**
+ * Advanced Link Checker - Frontend Styles
+ * Highlights broken links on the front-end of the website.
+ */
+
+.alc-broken-link {
+    color: #ff0000 !important;
+    text-decoration: underline wavy red !important;
+    position: relative;
+}
+
+.alc-broken-link:hover {
+    color: #cc0000 !important;
+}
+
+.alc-broken-link::after {
+    content: " \26A0";
+    font-size: 0.8em;
+    color: #ff0000;
+}
+
+.alc-broken-links-list {
+    list-style: none;
+    padding: 0;
+    margin: 1em 0;
+}
+
+.alc-broken-links-list li {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: #fff5f5;
+    border-left: 3px solid #ff0000;
+    font-size: 0.9em;
+}
+
+.alc-broken-links-list li a {
+    color: #cc0000;
+    word-break: break-all;
+}

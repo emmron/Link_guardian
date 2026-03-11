@@ -16,17 +16,32 @@ defined('ABSPATH') or die('No script kiddies please!');
  * @return void
  */
 function alc_send_email_notifications($brokenLinks) {
-    if (!ALC_NOTIFY_EMAIL || empty($brokenLinks)) {
+    $options = get_option('alc_options', array());
+    $notify_enabled = isset($options['notify_email']) ? $options['notify_email'] : ALC_NOTIFY_EMAIL;
+
+    if (!$notify_enabled || empty($brokenLinks)) {
         return;
     }
 
-    $to = ALC_NOTIFY_RECIPIENTS;
-    $subject = 'Broken Links Detected on Your Website';
-    $body = "Hello,\n\nThe following broken links have been detected on your website:\n\n";
+    $to = isset($options['notify_recipients']) ? $options['notify_recipients'] : get_option('admin_email');
+    $site_name = get_bloginfo('name');
+    $subject = sprintf('[%s] Broken Links Detected', $site_name);
+
+    $body = "Hello,\n\n";
+    $body .= sprintf("The following broken links have been detected on %s:\n\n", $site_name);
+
     foreach ($brokenLinks as $link) {
-        $body .= "URL: {$link['url']}, Status: {$link['status']}, Detected On: {$link['detected_on']}\n";
+        $url = is_object($link) ? $link->url : (isset($link['url']) ? $link['url'] : '');
+        $status = is_object($link) ? $link->status_code : (isset($link['status_code']) ? $link['status_code'] : 'Unknown');
+        $detected = is_object($link) ? $link->detection_time : (isset($link['detection_time']) ? $link['detection_time'] : '');
+
+        $body .= sprintf("  URL: %s\n  Status: %s\n  Detected: %s\n\n", $url, $status, $detected);
     }
-    $body .= "\nPlease take the necessary actions to resolve these issues.\n\nThank you.";
+
+    $body .= "You can manage broken links in your WordPress admin panel.\n";
+    $body .= admin_url('admin.php?page=advanced-link-checker') . "\n\n";
+    $body .= "Thank you.";
+
     $headers = array('Content-Type: text/plain; charset=UTF-8');
 
     wp_mail($to, $subject, $body, $headers);
@@ -42,8 +57,8 @@ function alc_format_link_data_for_display($linkData) {
     return sprintf(
         'URL: %s, Status Code: %s, Detected On: %s',
         esc_url($linkData['url']),
-        esc_html($linkData['status']),
-        esc_html(date('Y-m-d H:i:s', strtotime($linkData['detected_on'])))
+        esc_html($linkData['status_code']),
+        esc_html(date_i18n('Y-m-d H:i:s', strtotime($linkData['detection_time'])))
     );
 }
 
@@ -78,8 +93,28 @@ function alc_sanitize_input($data) {
  * @return bool True if the URL is excluded, false otherwise.
  */
 function alc_is_url_excluded($url) {
-    // Placeholder for future implementation. This function should check against
-    // a list of user-defined URL patterns or domains to exclude from scanning.
+    $options = get_option('alc_options', array());
+    $excluded_urls = isset($options['excluded_urls']) ? $options['excluded_urls'] : '';
+
+    if (empty($excluded_urls)) {
+        return false;
+    }
+
+    $patterns = array_filter(array_map('trim', explode("\n", $excluded_urls)));
+
+    foreach ($patterns as $pattern) {
+        // Convert wildcard pattern to regex
+        $regex = str_replace(
+            array('\*', '\?'),
+            array('.*', '.'),
+            preg_quote($pattern, '/')
+        );
+
+        if (preg_match('/^' . $regex . '$/i', $url)) {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -90,7 +125,7 @@ function alc_is_url_excluded($url) {
  * @return void
  */
 function alc_log($message) {
-    if (WP_DEBUG_LOG) {
-        error_log(print_r($message, true));
+    if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+        error_log('[Advanced Link Checker] ' . print_r($message, true));
     }
 }
