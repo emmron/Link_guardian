@@ -1,0 +1,20 @@
+/**
+ * Advanced Link Checker - Front End Styles (alias)
+ * This file is loaded by front-end-highlighting.php
+ */
+
+.alc-broken-link {
+    color: #ff0000 !important;
+    text-decoration: underline wavy red !important;
+    position: relative;
+}
+
+.alc-broken-link:hover {
+    color: #cc0000 !important;
+}
+
+.alc-broken-link::after {
+    content: " \26A0";
+    font-size: 0.8em;
+    color: #ff0000;
+}
